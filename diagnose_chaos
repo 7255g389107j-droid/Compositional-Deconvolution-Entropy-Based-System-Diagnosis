@@ -1,0 +1,103 @@
+# =================================================================
+# ITAGAKI-CHAOS-ENGINE (V8.0) - SCIENTIFIC DIAGNOSTIC SYSTEM
+# -----------------------------------------------------------------
+# Purpose: Quantifying System Entropy & Basis Collapse in CoDA
+# Framework: Poisson-Aitchison-Ohta Triple Stability Metrics
+# Author: Tatsuki Itagaki
+# Copyright (c) 2026 Tatsuki Itagaki
+# License: MIT License (https://opensource.org)
+# 
+# ACADEMIC CITATION:
+# If you use this software or its logic in your research, 
+# please cite the following works:
+# Ohta, T. (2011). DOI: 10.1007/s11004-011-9332-y
+# Itagaki, T (2026). DOI: 10.13140/RG.2.2.21953.93284
+# =================================================================
+
+diagnose_chaos_v8 <- function(Dataset, effective_library_size) {
+  # --- 0. DATA PREPARATION ---
+  # Dataset: Proportion matrix (Rows = Samples, Cols = Taxa/Components)
+  P <- as.matrix(Dataset)
+  P[P == 0] <- 1e-20 # Avoid log(0)
+  L <- log(P)
+  n_taxa <- ncol(P)
+  n_samples <- nrow(P)
+  
+  # --- 1. PHYSICAL CHAOS (S_p) ---
+  # Metric: Deviation from the "Poisson Noise Floor"
+  obs_v <- apply(L, 2, var)
+  theo_v <- 1 / (colMeans(P) * effective_library_size)
+  invariance_ratio <- obs_v / (theo_v + 1e-18)
+  # S_p: Log-normalized mean deviation (0 = Physical Limit)
+  S_p <- mean(log10(invariance_ratio + 1)) 
+  
+  # --- 2. GEOMETRIC CHAOS (S_g) ---
+  # Metric: Structural Dissipation of the Aitchison Simplex
+  vlr_matrix <- var(L)
+  eigen_vals <- eigen(vlr_matrix)$values
+  eigen_vals <- eigen_vals[eigen_vals > 1e-10] # Filter numerical noise
+  p_ev <- eigen_vals / sum(eigen_vals)
+  # S_g: Normalized Eigen-Entropy (1.0 = Total Disarray/Thermal Death)
+  S_g <- -sum(p_ev * log(p_ev)) / log(length(p_ev))
+  
+  # --- 3. STATISTICAL CHAOS (S_s) ---
+  # Metric: Absence of a Dominant Anchor (Ohta's Win-Count Asymmetry)
+  win_counts <- numeric(n_taxa)
+  for (j in 1:n_taxa) {
+    # Non-parametric winner-takes-all logic
+    r_ratio <- P / P[, j]
+    win_counts[j] <- sum(apply(r_ratio, 2, function(x) sd(x)/mean(x)) < 
+                         apply(1/r_ratio, 2, function(x) sd(x)/mean(x)), na.rm=TRUE)
+  }
+  # S_s: Competitive Anarchy Score (1.0 = No reliable reference exists)
+  S_s <- 1 - (max(win_counts) / (n_taxa - 1))
+  
+  # --- 4. COMPOSITE CHAOS INDEX ---
+  chaos_index <- (S_p + S_g + S_s) / 3
+  
+  # --- 5. AUTOMATED SCIENTIFIC REPORT ---
+  cat("\n==========================================================\n")
+  cat("      ITAGAKI CHAOS DIAGNOSTIC REPORT (V8.0)              \n")
+  cat("==========================================================\n")
+  cat(sprintf("FINAL SYSTEM CHAOS INDEX : %.6f\n", chaos_index))
+  cat(sprintf("PHYSICAL DEVIATION (S_p) : %.6f\n", S_p))
+  cat(sprintf("GEOMETRIC ENTROPY  (S_g) : %.6f\n", S_g))
+  cat(sprintf("STATISTICAL DRIFT  (S_s) : %.6f\n", S_s))
+  cat("----------------------------------------------------------\n")
+  
+  # Determination Logic
+  status <- "UNKNOWN"
+  if(chaos_index < 0.4) {
+    status <- "STABLE (Laminar)"
+    conclusion <- "SYSTEM IS STABLE. Basis reconstruction is highly reliable."
+  } else if(chaos_index < 0.7) {
+    status <- "TRANSITION (Perturbed)"
+    conclusion <- "SYSTEM IS IN TRANSITION. The measuring stick is warping."
+  } else {
+    status <- "CRITICAL (Turbulent)"
+    conclusion <- "[WARNING] ENTROPIC COLLAPSE. All components are fluctuating."
+  }
+  
+  cat(sprintf("SYSTEM STATUS: %s\n", status))
+  cat(sprintf("CONCLUSION   : %s\n", conclusion))
+  cat("==========================================================\n")
+  
+  # --- 6. RETURN NUMERICAL RESULTS ---
+  return(data.frame(
+    Chaos_Index = chaos_index,
+    Phys_Dev    = S_p,
+    Geom_Ent    = S_g,
+    Stat_Drift  = S_s,
+    Status      = status,
+    Max_Win     = max(win_counts),
+    Mean_IR     = mean(invariance_ratio)
+  ))
+}
+
+# Example Usage:
+# results <- diagnose_chaos_v8(Dataset = your_proportion_matrix, effective_library_size = eff_lib)
+# View(results)
+
+#Dataset = Dataset
+ results <- diagnose_chaos_v8(Dataset = Dataset, effective_library_size = eff_lib)
+ View(results)
